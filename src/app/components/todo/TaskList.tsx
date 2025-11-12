@@ -8,7 +8,7 @@ import type { Task } from "../../lib/type";
 import DeleteTask from "./DeleteTask";
 import UpdateTask from "./UpdateTask";
 import Button from "../common/Button";
-import DialogNotes from "../../(protected)/todos/pages/DialogNotes"; 
+import DialogNotes from "./DialogNotes"; 
 
 type Props = {
   tasks: Task[];
