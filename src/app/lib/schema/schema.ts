@@ -3,11 +3,6 @@ export const schema = yup.object({
     title: yup.string().required("Title is required"),
   });
   
-
-
-
-
-
 export const getAuthSchema = (mode: "signup" | "login") =>
     yup.lazy(() => {
       return yup.object({

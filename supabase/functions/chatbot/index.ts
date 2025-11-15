@@ -231,6 +231,7 @@ All necessary data is in the context below. Analyze the user's question and resp
         embedding: embedding.length > 0 ? embedding : null,
         todo_context: {
           stats: todoStats,
+       
           todos_count: todos.length,
           period_breakdown: {
             today: completedToday,
@@ -243,7 +244,7 @@ All necessary data is in the context below. Analyze the user's question and resp
       });
     });
 
-    // Return response i
+    // Return response immediately 
     return jsonResponse({ reply: aiResponse });
 
   } catch (err) {

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, ChangeEvent } from "react";
-import { supabase } from "../../../lib/supabase-client";
+import { supabase } from "@/app/lib/supabase-client";
 import { useRouter } from "next/navigation";
 import { User } from "@supabase/supabase-js";
 
@@ -42,7 +42,7 @@ export default function ProfileSettings() {
 
     setIsUploading(true);
 
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from("avatars")
       .upload(filePath, file, { upsert: true });
 

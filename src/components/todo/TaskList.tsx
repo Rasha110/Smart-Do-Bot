@@ -2,21 +2,19 @@
 
 import React from "react";
 import { Check } from "lucide-react";
-import { supabase } from "../../lib/supabase-client";
-import { useRouter } from "next/navigation";
-import type { Task } from "../../lib/type";
-import DeleteTask from "./DeleteTask";
-import UpdateTask from "./UpdateTask";
-import Button from "../common/Button";
-import DialogNotes from "./DialogNotes"; 
+import { supabase } from "@/app/lib/supabase-client";
+import type { Task } from "@/app/lib/type";
+import DeleteTask from "@/components/todo/DeleteTask";
+import UpdateTask from "@/components/todo//UpdateTask";
+import Button from "@/components/common/Button";
+import DialogNotes from "@/components/todo//DialogNotes"; 
 
 type Props = {
-  tasks: Task[];
+  tasks: Task[]
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
 };
 
 const TaskList: React.FC<Props> = ({ tasks, setTasks }) => {
-  const router = useRouter();
 
  const toggleComplete = async (id: string, current: boolean) => {
   const now = new Date().toISOString();
@@ -39,9 +37,7 @@ const TaskList: React.FC<Props> = ({ tasks, setTasks }) => {
     )
   );
 };
-
   const uniqueTasks = Array.from(new Map(tasks.map(t => [t.id, t])).values());
-
   return (
     <div>
       <ul className="mt-5 w-full max-w-3xl">

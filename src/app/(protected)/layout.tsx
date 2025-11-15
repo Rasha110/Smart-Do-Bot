@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "../lib/supabase-client";
+import { supabase } from "@/app/lib/supabase-client";
 import { CheckCircle2, LogOut, User, MessageCircle } from "lucide-react";
-import { ChatbotIcon } from "../components/common/ChatBotIcon";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
-import { TodoChatbot } from "../components/todo/ChatBot";
+import { TodoChatbot } from "@/components/todo/ChatBot";
 
-export default function ProtectedLayout({
+export default function NavBar({
   children,
 }: {
   children: React.ReactNode;
@@ -22,7 +21,7 @@ export default function ProtectedLayout({
     const fetchUser = async () => {
       const { data, error } = await supabase.auth.getUser();
       if (error || !data.user) {
-        router.push("/auth/signin");
+        router.push("/signin");
         return;
       }
       setUser(data.user);
@@ -32,7 +31,7 @@ export default function ProtectedLayout({
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (_, session) => {
-        if (!session) router.push("/auth/signin");
+        if (!session) router.push("/signin");
         else setUser(session.user);
       }
     );
@@ -44,7 +43,7 @@ export default function ProtectedLayout({
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push("/auth/signin");
+    router.push("/signin");
   };
 
   if (!user)

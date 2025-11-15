@@ -2,8 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { Input } from "../common/Input";
-import Button from "../common/Button";
+import { Input } from "@/components/common/Input";
+import Button from "@/components/common/Button";
 import { Send, Bot, User, X, } from "lucide-react";
 
 interface Message {
@@ -165,7 +165,7 @@ export function TodoChatbot({ onClose }: { onClose: () => void }) {
         <div className="flex gap-2">
           
           <Button 
-            variant="third"
+            variant="cancel"
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >

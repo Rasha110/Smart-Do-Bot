@@ -1,4 +1,4 @@
-import ProfileSettings from "../profile/profile-settings/page";
+import ProfileSettings from "@/app/(protected)/profile/profile-settings/page";
 
 export default function ProfilePage() {
   return <ProfileSettings />;

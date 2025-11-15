@@ -1,7 +1,7 @@
 import React from "react";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "danger" | "third";
+  variant?: "primary" | "secondary" | "danger" | "cancel";
   size?: "sm" | "md" | "lg";
   children: React.ReactNode;
 }
@@ -43,7 +43,7 @@ export const Button = ({
     case "danger":
       variantClasses = "bg-red-600 text-white hover:bg-red-700";
       break;
-      case "third":
+      case "cancel":
       variantClasses = "bg-grey-600 text-black hover:bg-grey-700";
       break;
   }

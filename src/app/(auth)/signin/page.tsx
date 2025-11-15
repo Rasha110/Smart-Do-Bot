@@ -1,4 +1,4 @@
-import { SignInForm } from "../sign-in-form";
+import { SignInForm } from "../../../components/auth/SignInForm";
 import Link from "next/link";
 
 export default function SignInPage() {
@@ -14,7 +14,7 @@ export default function SignInPage() {
 
         <p className="text-center text-sm text-gray-500 mt-4">
           Don’t have an account?{" "}
-          <Link href="/auth/signup" className="text-blue-600 hover:underline font-medium">
+          <Link href="/signup" className="text-blue-600 hover:underline font-medium">
             Sign up
           </Link>
         </p>

@@ -1,4 +1,4 @@
-import { SignUpForm } from "../sign-up-form";
+import { SignUpForm } from "../../../components/auth/SignUpForm";
 import Link from "next/link";
 export default function SignUpPage() {
   return (
@@ -13,7 +13,7 @@ export default function SignUpPage() {
         <SignUpForm />
         <p className="text-center text-sm text-gray-500 mt-4">
           Already have an account?{" "}
-          <Link href="/auth/signin" className="text-blue-600 hover:underline font-medium">
+          <Link href="/signin" className="text-blue-600 hover:underline font-medium">
             Sign in
           </Link>
         </p>

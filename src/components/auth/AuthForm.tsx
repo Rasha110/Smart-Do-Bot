@@ -3,19 +3,23 @@
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { supabase } from "../../lib/supabase-client";
-import Button from "../../components/common/Button";
-import {getAuthSchema } from "../../lib/schema/schema";
+import { supabase } from "@/app/lib/supabase-client";
+import Button from "@/components/common/Button";
+import { getAuthSchema } from "@/app/lib/schema/schema";
 import * as yup from "yup";
 
+export enum AuthMode {
+  LOGIN = "login",
+  SIGNUP = "signup"
+}
+
 interface AuthFormProps {
-  mode: "login" | "signup";
+  mode: AuthMode;
 }
 
 export default function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
 
-  
   const schema = getAuthSchema(mode);
 
   type AuthFormInputs = yup.InferType<typeof schema>;
@@ -30,7 +34,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
   const onSubmit = async (data: AuthFormInputs) => {
     try {
-      if (mode === "signup") {
+      if (mode === AuthMode.SIGNUP) {
         const { error } = await supabase.auth.signUp({
           email: data.email,
           password: data.password,
@@ -45,7 +49,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
         if (error) throw error;
       }
 
-      router.push("/todos"); 
+      router.push("/todos");
     } catch (error: any) {
       alert(error.message);
     }
@@ -57,15 +61,15 @@ export default function AuthForm({ mode }: AuthFormProps) {
       className="bg-white border border-gray-200 rounded-lg shadow-sm p-10 space-y-4"
     >
       <h2 className="text-xl font-semibold text-gray-800">
-        {mode === "signup" ? "Sign Up" : "Sign In"}
+        {mode === AuthMode.SIGNUP ? "Sign Up" : "Sign In"}
       </h2>
       <p className="text-sm text-gray-500">
-        {mode === "signup"
+        {mode === AuthMode.SIGNUP
           ? "Create a new account to get started"
           : "Enter your email and password to access your account"}
       </p>
 
-      {mode === "signup" && (
+      {mode === AuthMode.SIGNUP && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
           <input
@@ -81,7 +85,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
         <input
-          type="email"
           {...register("email")}
           placeholder="you@example.com"
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
@@ -92,7 +95,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
         <input
-          type="password"
           {...register("password")}
           placeholder="********"
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
@@ -101,7 +103,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
       </div>
 
       <Button type="submit" disabled={isSubmitting} variant="primary" className="w-full">
-        {isSubmitting ? "Please wait..." : mode === "signup" ? "Sign Up" : "Sign In"}
+        {isSubmitting ? "Please wait..." : mode === AuthMode.SIGNUP ? "Sign Up" : "Sign In"}
       </Button>
     </form>
   );

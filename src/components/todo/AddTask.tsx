@@ -2,10 +2,10 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { supabase } from "../../lib/supabase-client";
-import {schema} from "../../lib/schema/schema"
-import Button from "../common/Button";
-import type { Task } from "../../lib/type";
+import { supabase } from "@/app/lib/supabase-client";
+import {schema} from "@/app/lib/schema/schema"
+import Button from "@/components/common/Button";
+import type { Task } from "@/app/lib/type";
 type FormInputs = { title: string };
 type AddTaskProps = {
   tasks: Task[];
@@ -57,19 +57,7 @@ export default function AddTask({ tasks, setTasks }: AddTaskProps) {
         }
       )
       .subscribe();
-   {/*   useEffect(() => {
-        const subscription = supabase
-          .from("todos")
-          .on("INSERT", (payload) => {
-            const newTask = payload.new as Task;
-            setTasks((prev) => [newTask, ...prev]);
-          })
-          .subscribe();
-    
-        return () => {
-          supabase.removeSubscription(subscription);
-        };
-      }, [setTasks]);*/}
+   
 
  return () => {
       supabase.removeChannel(channel);

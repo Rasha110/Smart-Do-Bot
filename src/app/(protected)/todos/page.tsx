@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "../../lib/supabase-client";
-import AddTask from "../../components/todo/AddTask";
-import TaskList from "../../components/todo/TaskList";
-import type { Task } from "../../lib/type";
+import { supabase } from "@/app/lib/supabase-client";
+import AddTask from "@/components/todo/AddTask";
+import TaskList from "@/components/todo/TaskList";
+import type { Task } from "@/app/lib/type";
 
 
 

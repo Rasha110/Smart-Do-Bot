@@ -1,9 +1,9 @@
 "use client";
 import { useEffect } from "react";
 import React, { useState } from "react";
-import { supabase } from "../../lib/supabase-client";
-import Button from "../common/Button";
-import type { Task } from "../../lib/type";
+import { supabase } from "@/app/lib/supabase-client";
+import Button from "@/components/common/Button";
+import type { Task } from "@/app/lib/type";
 
 interface UpdateTaskProps {
   task: Task;

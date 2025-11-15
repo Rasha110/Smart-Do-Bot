@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { supabase } from "../../lib/supabase-client";
+import { supabase } from "@/app/lib/supabase-client";
 import { Dialog } from "@headlessui/react";
-import { Task } from "../../lib/type";
+import { Task } from "@/app/lib/type";
 import { NotebookPen } from "lucide-react";
 
 interface DialogNotesProps {
