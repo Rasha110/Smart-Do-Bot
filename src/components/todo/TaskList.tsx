@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from "react";
@@ -5,9 +6,9 @@ import { Check } from "lucide-react";
 import { supabase } from "@/app/lib/supabase-client";
 import type { Task } from "@/app/lib/type";
 import DeleteTask from "@/components/todo/DeleteTask";
-import UpdateTask from "@/components/todo//UpdateTask";
+import UpdateTask from "@/components/todo/UpdateTask";
 import Button from "@/components/common/Button";
-import DialogNotes from "@/components/todo//DialogNotes"; 
+import DialogNotes from "@/components/todo/DialogNotes"; 
 
 type Props = {
   tasks: Task[]
@@ -16,28 +17,30 @@ type Props = {
 
 const TaskList: React.FC<Props> = ({ tasks, setTasks }) => {
 
- const toggleComplete = async (id: string, current: boolean) => {
-  const now = new Date().toISOString();
-  
-  const { error } = await supabase
-    .from("todos")
-    .update({ 
-      is_completed: !current,
-      updated_at: now 
-    })
-    .eq("id", id);
+  const toggleComplete = async (id: string, current: boolean) => {
+    const now = new Date().toISOString();
+    
+    const { error } = await supabase
+      .from("todos")
+      .update({ 
+        is_completed: !current,
+        updated_at: now 
+      })
+      .eq("id", id);
 
-  if (error) return console.error("Toggle error:", error.message);
+    if (error) return console.error("Toggle error:", error.message);
 
-  setTasks(prev =>
-    prev.map(task => 
-      task.id === id 
-        ? { ...task, is_completed: !current, updated_at: now } 
-        : task
-    )
-  );
-};
+    setTasks(prev =>
+      prev.map(task => 
+        task.id === id 
+          ? { ...task, is_completed: !current, updated_at: now } 
+          : task
+      )
+    );
+  };
+
   const uniqueTasks = Array.from(new Map(tasks.map(t => [t.id, t])).values());
+
   return (
     <div>
       <ul className="mt-5 w-full max-w-3xl">
@@ -69,9 +72,7 @@ const TaskList: React.FC<Props> = ({ tasks, setTasks }) => {
                   <Check size={15} />
                 </Button>
 
-               
                 <DialogNotes task={task} setTasks={setTasks} />
-
                 <UpdateTask task={task} tasks={tasks} setTasks={setTasks} />
                 <DeleteTask task={task} tasks={tasks} setTasks={setTasks} />
               </div>

@@ -35,10 +35,21 @@ const DialogNotes: React.FC<DialogNotesProps> = ({ task, setTasks }) => {
       return;
     }
 
-    // Update local UI immediately
+    const updatedTask = { ...task, notes };
     setTasks(prevTasks =>
-      prevTasks.map(t => (t.id === task.id ? { ...t, notes } : t))
+      prevTasks.map(t => (t.id === task.id ? updatedTask : t))
     );
+
+    setTimeout(() => {
+      supabase.functions.invoke('sync-embeddings', {
+        method: 'GET' 
+      })
+        .then(({  error: embError }) => {
+          if (embError) {
+            console.error('⚠️ Embedding update failed:', embError);
+          } 
+        });
+    }, 500);
 
     setIsSaving(false);
     handleClose();
@@ -72,14 +83,14 @@ const DialogNotes: React.FC<DialogNotesProps> = ({ task, setTasks }) => {
             <div className="flex justify-end gap-2 mt-4">
               <button
                 onClick={handleClose}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md"
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveNotes}
                 disabled={isSaving}
-                className="px-4 py-2 bg-blue-500 text-white rounded-md"
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? "Saving..." : "Save Notes"}
               </button>

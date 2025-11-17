@@ -1,6 +1,5 @@
 "use client";
-import { useEffect } from "react";
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/app/lib/supabase-client";
 import Button from "@/components/common/Button";
 import type { Task } from "@/app/lib/type";
@@ -18,26 +17,42 @@ export default function UpdateTask({ task, tasks, setTasks }: UpdateTaskProps) {
 
   const handleUpdate = async () => {
     if (!title.trim()) return;
-  
+
     setLoading(true);
-    const now = new Date().toISOString(); 
-  
+    const now = new Date().toISOString();
+
     const { error } = await supabase
       .from("todos")
       .update({ title, updated_at: now })
       .eq("id", task.id);
-  
+
     if (error) {
       console.error("Error updating task:", error.message);
-    } else {
-      setTasks(tasks.map((t) =>
-        t.id === task.id ? { ...t, title, updated_at: now } : t
-      ));
-      setIsEditing(false);
+      setLoading(false);
+      return;
     }
+
+    const updatedTask = { ...task, title, updated_at: now };
+    
+    setTasks(tasks.map((t) =>
+      t.id === task.id ? updatedTask : t
+    ));
+
+    // Generate new embedding with GET method
+    setTimeout(() => {
+      supabase.functions.invoke('sync-embeddings', {
+        method: 'GET'
+      })
+        .then(({ error: embError }) => {
+          if (embError) {
+            console.error('⚠️ Embedding update failed:', embError);
+          } 
+        });
+    }, 500);
+    
+    setIsEditing(false);
     setLoading(false);
   };
-  
 
   useEffect(() => {
     const channel = supabase
@@ -63,7 +78,6 @@ export default function UpdateTask({ task, tasks, setTasks }: UpdateTaskProps) {
     };
   }, [setTasks]);
 
-
   return (
     <div className="ml-2 flex items-center gap-2">
       {isEditing ? (
@@ -72,15 +86,28 @@ export default function UpdateTask({ task, tasks, setTasks }: UpdateTaskProps) {
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleUpdate();
+              } else if (e.key === "Escape") {
+                setIsEditing(false);
+                setTitle(task.title);
+              }
+            }}
             className="border p-1 rounded text-blue-600 bg-white outline-none focus:ring-2 focus:ring-blue-500"
+            autoFocus
           />
 
-
-          <Button onClick={handleUpdate} variant="primary" size="sm"  className="p-1">
+          <Button 
+            onClick={handleUpdate} 
+            variant="primary" 
+            size="sm" 
+            className="p-1"
+            disabled={loading || !title.trim()}
+          >
             {loading ? "Saving..." : "Save"}
           </Button>
 
-      
           <Button
             onClick={() => {
               setIsEditing(false);
@@ -94,7 +121,12 @@ export default function UpdateTask({ task, tasks, setTasks }: UpdateTaskProps) {
           </Button>
         </>
       ) : (
-        <Button onClick={() => setIsEditing(true)} variant="primary" size="sm" className="p-1">
+        <Button 
+          onClick={() => setIsEditing(true)} 
+          variant="primary" 
+          size="sm" 
+          className="p-1"
+        >
           Edit
         </Button>
       )}

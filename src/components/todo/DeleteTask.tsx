@@ -1,10 +1,10 @@
 "use client"
-import React from "react";
+import React, { useEffect } from "react";
 import { Trash2 } from "lucide-react";
 import Button from "@/components/common/Button";
 import type { Task } from "@/app/lib/type";
 import { supabase } from "@/app/lib/supabase-client";
-import { useEffect } from "react";
+
 type Props = {
   task: Task;
   tasks: Task[];
@@ -13,9 +13,19 @@ type Props = {
 
 const DeleteTask: React.FC<Props> = ({ task, tasks, setTasks }) => {
   const handleDelete = async () => {
-    await supabase.from("todos").delete().eq("id", task.id);
+    const { error } = await supabase
+      .from("todos")
+      .delete()
+      .eq("id", task.id);
+
+    if (error) {
+      console.error("Error deleting task:", error.message);
+      return;
+    }
+
     setTasks(tasks.filter((t) => t.id !== task.id));
   };
+
   useEffect(() => {
     const channel = supabase
       .channel("todos-deletes")
