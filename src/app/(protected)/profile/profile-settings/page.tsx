@@ -1,13 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, ChangeEvent } from "react";
-import { supabase } from "@/app/lib/supabase-client";
 import { useRouter } from "next/navigation";
-import { User } from "@supabase/supabase-js";
+import { uploadAvatar, updateProfile, getProfile } from "@/app/actions/profile";
 
 export default function ProfileSettings() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
 
   // Form state
   const [name, setName] = useState("");
@@ -17,112 +15,76 @@ export default function ProfileSettings() {
   // Loading states
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  // Fetch user session
+  // Fetch user profile
   useEffect(() => {
-    const fetchUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!data.user) return;
+    const fetchProfile = async () => {
+      const result = await getProfile();
+      
+      if ("error" in result) {
+        router.push("/signin");
+        return;
+      }
 
-      setUser(data.user);
-      setName(data.user.user_metadata?.full_name || "");
-      setEmail(data.user.email || "");
-      setAvatarUrl(data.user.user_metadata?.avatar_url || null);
+      setName(result.user.name);
+      setEmail(result.user.email || "");
+      setAvatarUrl(result.user.avatarUrl);
     };
 
-    fetchUser();
-  }, []);
+    fetchProfile();
+  }, [router]);
 
-  // Upload avatar
-  const uploadAvatar = async (file: File) => {
-    if (!file) return null;
-
-    const sanitizedFileName = file.name.replace(/\s+/g, "-").replace(/[^a-zA-Z0-9-_.]/g, "");
-    const filePath = `avatars/${sanitizedFileName}`;
-
-    setIsUploading(true);
-
-    const { error } = await supabase.storage
-      .from("avatars")
-      .upload(filePath, file, { upsert: true });
-
-    if (error) {
-      console.error("Avatar upload error:", error.message);
-      setIsUploading(false);
-      return null;
-    }
-
-    const { data: publicData } = supabase.storage.from("avatars").getPublicUrl(filePath);
-
-    setIsUploading(false);
-    return publicData.publicUrl;
-  };
-
-  // Handle avatar input change
+  // Handle avatar upload
   const handleAvatarChange = async (e: ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.[0]) return;
 
     const file = e.target.files[0];
-    const url = await uploadAvatar(file);
-    if (!url) return;
+    setIsUploading(true);
+    setError(null);
 
-    // Update user metadata in Supabase Auth
-    const { error } = await supabase.auth.updateUser({
-      data: { avatar_url: url, full_name: name },
-    });
+    const formData = new FormData();
+    formData.append("file", file);
 
-    if (error) {
-      console.error("Error updating avatar:", error.message);
+    const result = await uploadAvatar(formData);
+
+    setIsUploading(false);
+
+    if ("error" in result) {
+      setError(result.error);
       return;
     }
 
-    setAvatarUrl(url);
+    setAvatarUrl(result.url);
   };
 
   // Handle profile update
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
-
     setIsSaving(true);
+    setError(null);
+    setSuccess(null);
 
-    // Update Supabase Auth
-    const { error: authError } = await supabase.auth.updateUser({
-      data: { full_name: name, avatar_url: avatarUrl },
-      email,
-    });
-
-    if (authError) {
-      console.error("Profile update error:", authError.message);
-      setIsSaving(false);
-      return;
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("email", email);
+    if (avatarUrl) {
+      formData.append("avatar_url", avatarUrl);
     }
 
-    // Update Profiles table
-    const { error: dbError } = await supabase.from("Profiles").upsert({
-      auth_id: user.id,
-      name,
-      avatar_url: avatarUrl,
-      email,
-    });
-
-    if (dbError) {
-      console.error("Database update error:", dbError.message);
-      setIsSaving(false);
-      return;
-    }
-
-    setUser({
-      ...user,
-      email,
-      user_metadata: { full_name: name, avatar_url: avatarUrl },
-    });
+    const result = await updateProfile(formData);
 
     setIsSaving(false);
-    alert("Profile updated successfully!");
-  };
 
-  if (!user) return null;
+    if ("error" in result) {
+      setError(result.error);
+      return;
+    }
+
+    setSuccess("Profile updated successfully!");
+    setTimeout(() => setSuccess(null), 3000);
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">
@@ -137,6 +99,18 @@ export default function ProfileSettings() {
         <div className="bg-white p-6 rounded shadow">
           <h2 className="text-xl font-bold mb-4">Profile Information</h2>
 
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
+              {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded">
+              {success}
+            </div>
+          )}
+
           <div className="flex items-center gap-4 mb-4">
             <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center">
               {isUploading ? (
@@ -145,17 +119,23 @@ export default function ProfileSettings() {
                 <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
                 <span className="text-2xl font-bold text-white">
-                  {name ? name[0].toUpperCase() : email[0].toUpperCase()}
+                  {name ? name[0].toUpperCase() : email[0]?.toUpperCase()}
                 </span>
               )}
             </div>
 
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarChange}
-              disabled={isUploading}
-            />
+            <div>
+              <label className="cursor-pointer px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 inline-block">
+                {isUploading ? "Uploading..." : "Choose Avatar"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  disabled={isUploading}
+                  className="hidden"
+                />
+              </label>
+            </div>
           </div>
 
           <form onSubmit={handleUpdateProfile} className="space-y-4">
@@ -166,6 +146,7 @@ export default function ProfileSettings() {
                 className="w-full border rounded p-2"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                required
               />
             </div>
 
@@ -176,6 +157,7 @@ export default function ProfileSettings() {
                 className="w-full border rounded p-2"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
               />
             </div>
 

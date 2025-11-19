@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
 import { Input } from "@/components/common/Input";
 import Button from "@/components/common/Button";
 import { Send, Bot, User, X } from "lucide-react";
+import { createBrowserSupabaseClient } from "@/app/lib/supabase-browser";
 
 interface Message {
   id: string;
@@ -13,17 +13,14 @@ interface Message {
   timestamp: string;
 }
 
-const createMessage = (role: "user" | "assistant", content: string): Message => ({
-  id: Date.now().toString(),
+const createMessage = (role: "user" | "assistant", content: string, timestamp?: string): Message => ({
+  id: `${Date.now()}-${Math.random()}`,
   role,
   content,
-  timestamp: new Date().toISOString()
+  timestamp: timestamp || new Date().toISOString()
 });
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabase = createBrowserSupabaseClient();
 
 export function TodoChatbot({ onClose }: { onClose: () => void }) {
   const [messages, setMessages] = useState<Message[]>([
@@ -33,29 +30,38 @@ export function TodoChatbot({ onClose }: { onClose: () => void }) {
   const [isLoading, setIsLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const hasLoadedHistory = useRef(false);
 
   useEffect(() => {
+    if (hasLoadedHistory.current) return;
+    
     const getUser = async () => {
       try {
         const { data, error } = await supabase.auth.getUser();
 
         if (error) {
-          console.error("Auth error:", error);
           setAuthError("Failed to get user authentication");
+          setIsLoadingHistory(false);
           return;
         }
 
         if (!data.user) {
           setAuthError("No user found. Please log in.");
+          setIsLoadingHistory(false);
           return;
         }
 
         setUserId(data.user.id);
-        loadChatHistory(data.user.id);
-      } catch (err) {
-        console.error("Error getting user:", err);
+        await loadChatHistory(data.user.id);
+        if (!hasLoadedHistory.current) {
+          hasLoadedHistory.current = true;
+          loadChatHistory(data.user.id);
+        }
+              } catch (err) {
         setAuthError("Error retrieving authentication");
+        setIsLoadingHistory(false);
       }
     };
 
@@ -69,27 +75,57 @@ export function TodoChatbot({ onClose }: { onClose: () => void }) {
     });
   }, [messages]);
 
-  const loadChatHistory = (uid: string) => {
+  const loadChatHistory = async (uid: string) => {
     try {
-      const saved = localStorage.getItem(`chatbot_history_${uid}`);
-      if (!saved) return;
+      setIsLoadingHistory(true);
       
-      const history = JSON.parse(saved);
-      if (Array.isArray(history) && history.length > 0) {
-        setMessages(history);
-      }
-    } catch (err) {
-      console.error("Error loading chat history:", err);
-    }
-  };
+      const { data: chatHistory, error } = await supabase
+        .from("ai_chat_history")
+        .select("query, response, created_at")
+        .eq("user_id", uid)
+        .order("created_at", { ascending: true })
+        .limit(250);
 
-  const saveChatHistory = (msgs: Message[]) => {
-    if (!userId) return;
-    
-    try {
-      localStorage.setItem(`chatbot_history_${userId}`, JSON.stringify(msgs));
+      if (error) {
+        setIsLoadingHistory(false);
+        return;
+      }
+
+      if (!chatHistory || chatHistory.length === 0) {
+        setIsLoadingHistory(false);
+        return;
+      }
+
+      const historyMessages: Message[] = [];
+      
+      chatHistory.forEach((record) => {
+        historyMessages.push({
+          id: `user-${record.created_at}-${Math.random()}`,
+          role: "user",
+          content: record.query,
+          timestamp: record.created_at
+        });
+        historyMessages.push({
+          id: `assistant-${record.created_at}-${Math.random()}`,
+          role: "assistant",
+          content: record.response,
+          timestamp: record.created_at
+        });
+      });
+
+      setMessages(prev => {
+        // Avoid wiping already loaded messages
+        if (prev.length > 1) return prev;
+        return [
+          createMessage("assistant", "Hi! I'm your AI todo assistant. Ask me anything about your tasks!"),
+          ...historyMessages
+        ];
+      });
+      
+      
+      setIsLoadingHistory(false);
     } catch (err) {
-      console.error("Error saving chat history:", err);
+      setIsLoadingHistory(false);
     }
   };
 
@@ -97,26 +133,19 @@ export function TodoChatbot({ onClose }: { onClose: () => void }) {
     if (!input.trim() || !userId || isLoading) return;
 
     const userMessage = createMessage("user", input);
-    const updatedMessages = [...messages, userMessage];
-    
-    setMessages(updatedMessages);
-    saveChatHistory(updatedMessages);
+    setMessages(prev => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.access_token) {
-        throw new Error("No valid session found. Please log in again.");
-      }
-
       const { data, error } = await supabase.functions.invoke('chatbot', {
-        body: { query: userMessage.content }
+        body: { 
+          user_id: userId,
+          query: userMessage.content 
+        }
       });
 
       if (error) {
-        console.error("Full error object:", error);
         const errorDetails = error.context ? JSON.stringify(error.context) : error.message;
         throw new Error(`Chatbot error: ${errorDetails || "Failed to get response"}`);
       }
@@ -126,20 +155,12 @@ export function TodoChatbot({ onClose }: { onClose: () => void }) {
       }
 
       const assistantMessage = createMessage("assistant", data.reply);
-      const finalMessages = [...updatedMessages, assistantMessage];
-      
-      setMessages(finalMessages);
-      saveChatHistory(finalMessages);
+      setMessages(prev => [...prev, assistantMessage]);
 
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Something went wrong.";
-      console.error("Chat error:", errorMsg);
-      
       const errorMessage = createMessage("assistant", `Error: ${errorMsg}`);
-      const finalMessages = [...updatedMessages, errorMessage];
-      
-      setMessages(finalMessages);
-      saveChatHistory(finalMessages);
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -175,36 +196,44 @@ export function TodoChatbot({ onClose }: { onClose: () => void }) {
           </div>
         )}
         
-        {messages.map(msg => (
-          <div key={msg.id} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-            {msg.role === "assistant" && (
-              <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-                <Bot className="h-4 w-4 text-white" />
-              </div>
-            )}
-            <div className={`rounded-lg px-4 py-2 max-w-[70%] break-words ${msg.role === "user" ? "bg-blue-500 text-white" : "bg-white text-gray-900 border border-gray-200"}`}>
-              <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-              <span className={`text-xs mt-1 block ${msg.role === "user" ? "text-blue-100" : "text-gray-500"}`}>
-                {new Date(msg.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            </div>
-            {msg.role === "user" && (
-              <div className="h-8 w-8 rounded-full bg-gray-400 flex items-center justify-center flex-shrink-0">
-                <User className="h-4 w-4 text-white" />
-              </div>
-            )}
+        {isLoadingHistory ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-gray-500">Loading chat history...</p>
           </div>
-        ))}
+        ) : (
+          <>
+            {messages.map(msg => (
+              <div key={msg.id} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                {msg.role === "assistant" && (
+                  <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                    <Bot className="h-4 w-4 text-white" />
+                  </div>
+                )}
+                <div className={`rounded-lg px-4 py-2 max-w-[70%] break-words ${msg.role === "user" ? "bg-blue-500 text-white" : "bg-white text-gray-900 border border-gray-200"}`}>
+                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  <span className={`text-xs mt-1 block ${msg.role === "user" ? "text-blue-100" : "text-gray-500"}`}>
+                    {new Date(msg.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+                {msg.role === "user" && (
+                  <div className="h-8 w-8 rounded-full bg-gray-400 flex items-center justify-center flex-shrink-0">
+                    <User className="h-4 w-4 text-white" />
+                  </div>
+                )}
+              </div>
+            ))}
 
-        {isLoading && (
-          <div className="flex gap-3 justify-start">
-            <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-              <Bot className="h-4 w-4 text-white" />
-            </div>
-            <div className="rounded-lg px-4 py-2 bg-white border border-gray-200">
-              <p className="text-sm text-gray-600 animate-pulse">Thinking...</p>
-            </div>
-          </div>
+            {isLoading && (
+              <div className="flex gap-3 justify-start">
+                <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                  <Bot className="h-4 w-4 text-white" />
+                </div>
+                <div className="rounded-lg px-4 py-2 bg-white border border-gray-200">
+                  <p className="text-sm text-gray-600 animate-pulse">Thinking...</p>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 

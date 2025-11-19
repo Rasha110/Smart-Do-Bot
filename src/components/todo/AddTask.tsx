@@ -1,105 +1,74 @@
 "use client";
-import { useEffect } from "react";
+
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { supabase } from "@/app/lib/supabase-client";
-import { schema } from "@/app/lib/schema/schema"
+import { addTodo } from "@/app/actions/todos";
+import { schema } from "@/app/lib/schema/schema";
 import Button from "@/components/common/Button";
-import type { Task } from "@/app/lib/type";
 
 type FormInputs = { title: string; notes?: string };
-type AddTaskProps = {
-  tasks: Task[];
-  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
-};
 
-export default function AddTask({ tasks, setTasks }: AddTaskProps) {
+export default function AddTask() {
+  const [error, setError] = useState<string | null>(null);
+
   const {
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<FormInputs>({
-    resolver: yupResolver(schema) as any,
+    resolver: yupResolver(schema) ,
   });
 
-  const addTask = async (title: string, notes?: string) => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
+  const onSubmit = async (data: FormInputs) => {
+    setError(null);
 
-    // STEP 1: Insert todo (trigger creates embedding record with NULL)
-    const { data, error } = await supabase
-      .from("todos")
-      .insert([{ title, notes: notes || null, is_completed: false, user_id: user.id }])
-      .select();
-
-    if (error) {
-      console.error("Insert error:", error.message);
-      return;
+    const formData = new FormData();
+    formData.append("title", data.title);
+    if (data.notes) {
+      formData.append("notes", data.notes);
     }
 
-    if (data && data.length > 0) {
-      const newTask = data[0] as Task;
-      setTasks((prev) => [newTask, ...prev]);
+    const result = await addTodo(formData);
 
-      // STEP 2: Generate embedding using GET method (batch processes all NULL embeddings)
-      setTimeout(() => {
-        supabase.functions.invoke('sync-embeddings', {
-          method: 'GET'
-        })
-          .then(({  error: embError }) => {
-            if (embError) {
-              console.error(' Embedding generation failed:', embError);
-            } 
-          });
-      }, 500); // Small delay for trigger to complete
+    if (result.error) {
+      setError(result.error);
+    } else {
+      reset();
     }
   };
 
-  useEffect(() => {
-    const channel = supabase
-      .channel("todos-inserts")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "todos",
-        },
-        (payload) => {
-          const newTask = payload.new as Task;
-          setTasks((prev) => [newTask, ...prev]);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [setTasks]);
-
   return (
     <form
-      onSubmit={handleSubmit(async (data) => {
-        await addTask(data.title, data.notes);
-        reset();
-      })}
+      onSubmit={handleSubmit(onSubmit)}
       className="flex flex-col max-w-3xl w-full"
     >
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
+        </div>
+      )}
+
       <label className="text-gray-700 mb-3 mt-10">Write your task</label>
       <input
         {...register("title")}
         placeholder="Add your task"
-        className="border p-3"
+        className="border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
       />
       {errors.title && (
-        <p className="text-red-500 text-sm">{errors.title.message}</p>
+        <p className="text-red-500 text-sm mt-1">{errors.title.message}</p>
       )}
 
-      <Button type="submit" variant="primary" className="mt-5 w-full">
-        Add
+     
+
+      <Button 
+        type="submit" 
+        variant="primary" 
+        className="mt-5 w-full"
+        disabled={isSubmitting}
+      >
+        {isSubmitting ? "Adding..." : "Add"}
       </Button>
     </form>
   );

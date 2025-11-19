@@ -1,5 +1,5 @@
-import AuthForm from "@/components/auth/AuthForm";
-import { AuthMode } from "@/components/auth/AuthForm";
+import AuthForm, { AuthMode } from "./AuthForm";
+
 export function SignInForm() {
-  return <AuthForm mode={AuthMode.LOGIN} />
+  return <AuthForm mode={AuthMode.LOGIN} />;
 }

@@ -1,105 +1,77 @@
 "use client";
 
-import React, { useState } from "react";
-import { supabase } from "@/app/lib/supabase-client";
-import { Dialog } from "@headlessui/react";
-import { Task } from "@/app/lib/type";
-import { NotebookPen } from "lucide-react";
+import { useState, useTransition } from "react";
+import { updateTodo } from "@/app/actions/todos";
+import Button from "@/components/common/Button";
+import type { Task } from "@/app/lib/type";
+import { FileText } from "lucide-react";
 
 interface DialogNotesProps {
   task: Task;
-  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
 }
 
-const DialogNotes: React.FC<DialogNotesProps> = ({ task, setTasks }) => {
+export default function DialogNotes({ task }: DialogNotesProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [notes, setNotes] = useState(task.notes || "");
-  const [isSaving, setIsSaving] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-  const handleOpen = () => setIsOpen(true);
-  const handleClose = () => setIsOpen(false);
+  const handleSave = () => {
+    startTransition(async () => {
+      const result = await updateTodo(task.id, { notes: notes.trim() || null });
 
-  const handleSaveNotes = async () => {
-    if (!task.id) return;
-
-    setIsSaving(true);
-
-    const { error } = await supabase
-      .from("todos")
-      .update({ notes })
-      .eq("id", task.id);
-
-    if (error) {
-      console.error("Error saving notes:", error.message);
-      setIsSaving(false);
-      return;
-    }
-
-    const updatedTask = { ...task, notes };
-    setTasks(prevTasks =>
-      prevTasks.map(t => (t.id === task.id ? updatedTask : t))
-    );
-
-    setTimeout(() => {
-      supabase.functions.invoke('sync-embeddings', {
-        method: 'GET' 
-      })
-        .then(({  error: embError }) => {
-          if (embError) {
-            console.error('⚠️ Embedding update failed:', embError);
-          } 
-        });
-    }, 500);
-
-    setIsSaving(false);
-    handleClose();
+      if (result.error) {
+        console.error("Error updating notes:", result.error);
+        alert(result.error);
+      } else {
+        setIsOpen(false);
+      }
+    });
   };
 
   return (
     <>
-      <NotebookPen
-        className="w-6 h-6 cursor-pointer"
-        onClick={handleOpen}
-      />
+      <Button
+        onClick={() => setIsOpen(true)}
+        variant="primary"
+        size="sm"
+        className="p-2"
+      >
+        <FileText size={15} />
+      </Button>
 
-      <Dialog open={isOpen} onClose={handleClose}>
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/30">
-          <Dialog.Panel className="bg-white p-6 rounded-lg max-w-lg w-full shadow-lg">
-            <h1 className="text-xl font-semibold">
-              Notes for Task
-            </h1>
-            <h2 className="text-sm mt-2 mb-4">
-              {task.title}
-            </h2>
-
+      {isOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4 text-gray-800">Edit Notes</h3>
+            
             <textarea
-              placeholder="Enter your notes here..."
               value={notes}
-              onChange={e => setNotes(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-md"
-              rows={6}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg p-3 mb-4 focus:ring-2 focus:ring-blue-500 outline-none resize-none text-gray-800"
+              rows={5}
+              placeholder="Add notes about this task..."
+              disabled={isPending}
             />
 
-            <div className="flex justify-end gap-2 mt-4">
-              <button
-                onClick={handleClose}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition"
+            <div className="flex gap-2 justify-end">
+              <Button
+                onClick={() => setIsOpen(false)}
+                variant="secondary"
+                disabled={isPending}
               >
                 Cancel
-              </button>
-              <button
-                onClick={handleSaveNotes}
-                disabled={isSaving}
-                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              </Button>
+              <Button
+                onClick={handleSave}
+                variant="primary"
+                disabled={isPending}
               >
-                {isSaving ? "Saving..." : "Save Notes"}
-              </button>
+                {isPending ? "Saving..." : "Save"}
+              </Button>
             </div>
-          </Dialog.Panel>
+          </div>
         </div>
-      </Dialog>
+      )}
     </>
   );
-};
-
-export default DialogNotes;
+}

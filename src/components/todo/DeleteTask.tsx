@@ -1,9 +1,10 @@
-"use client"
-import React, { useEffect } from "react";
+"use client";
+
+import React from "react";
 import { Trash2 } from "lucide-react";
 import Button from "@/components/common/Button";
 import type { Task } from "@/app/lib/type";
-import { supabase } from "@/app/lib/supabase-client";
+import { deleteTodo } from "@/app/actions/todos"; // ←
 
 type Props = {
   task: Task;
@@ -11,53 +12,29 @@ type Props = {
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
 };
 
-const DeleteTask: React.FC<Props> = ({ task, tasks, setTasks }) => {
+export default function DeleteTask({ task, tasks, setTasks }: Props) {
   const handleDelete = async () => {
-    const { error } = await supabase
-      .from("todos")
-      .delete()
-      .eq("id", task.id);
+    // Optimistic UI update
+    setTasks((prev) => prev.filter((t) => t.id !== task.id));
 
-    if (error) {
-      console.error("Error deleting task:", error.message);
-      return;
+    const result = await deleteTodo(task.id);
+
+    if (result?.error) {
+      console.error("Delete error:", result.error);
+
+ 
+      setTasks(tasks);
     }
-
-    setTasks(tasks.filter((t) => t.id !== task.id));
   };
-
-  useEffect(() => {
-    const channel = supabase
-      .channel("todos-deletes")
-      .on(
-        "postgres_changes",
-        {
-          event: "DELETE",
-          schema: "public",
-          table: "todos",
-        },
-        (payload) => {
-          const deletedTask = payload.old as Task;
-          setTasks((prev) => prev.filter((t) => t.id !== deletedTask.id));
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel); 
-    };
-  }, [setTasks]);
 
   return (
     <Button
       onClick={handleDelete}
-      size="sm" 
-      variant="danger" 
+      size="sm"
+      variant="danger"
       className="ml-2 p-2 flex items-center justify-center"
     >
       <Trash2 size={15} />
     </Button>
   );
-};
-
-export default DeleteTask;
+}

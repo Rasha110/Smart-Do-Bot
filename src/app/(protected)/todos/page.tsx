@@ -1,39 +1,23 @@
-"use client";
-import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/app/lib/supabase-client";
+import { getTodos } from "@/app/actions/todos";
 import AddTask from "@/components/todo/AddTask";
 import TaskList from "@/components/todo/TaskList";
-import type { Task } from "@/app/lib/type";
+import { redirect } from "next/navigation";
 
+export default async function TodosPage() {
+  const { data: tasks, error } = await getTodos();
 
+  if (error === "Not authenticated") {
+    redirect("/signin");
+  }
 
-export default function Dashboard() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-
-  
-  // Fetch all tasks
-  const fetchTodos = async () => {
-    const { data, error } = await supabase
-      .from("todos")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) console.error("Fetch todos error:", error.message);
-    else setTasks(data || []);
-  };
-  useEffect(() => {
-    fetchTodos();
-  }, []);
-  // Stats
-  const totalTasks = tasks.length;
-  const completedTasks = useMemo(
-    () => tasks.filter((t) => t.is_completed).length,
-    [tasks]
-  );
+  const totalTasks = tasks?.length || 0;
+  const completedTasks = tasks?.filter((t) => t.is_completed).length || 0;
   const remainingTasks = totalTasks - completedTasks;
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4">
       <div className="max-w-2xl w-full space-y-8">
-        
+        {/* Stats */}
         <section className="bg-white rounded-xl shadow-md p-6">
           <h2 className="text-lg font-semibold text-gray-700 mb-4">
             Your Progress
@@ -57,17 +41,20 @@ export default function Dashboard() {
             </div>
           </div>
         </section>
+
         {/* Add Task */}
         <section className="bg-white rounded-xl shadow-md p-6">
           <h2 className="text-lg font-semibold text-gray-700 mb-4">
             Add New Task
           </h2>
-          <AddTask tasks={tasks} setTasks={setTasks} />
+          <AddTask />
         </section>
+
         {/* Task List */}
         <section className="bg-white rounded-xl shadow-md p-6">
           <h2 className="text-lg font-semibold text-gray-700 mb-4">Tasks</h2>
-          <TaskList tasks={tasks} setTasks={setTasks} />        </section>
+          <TaskList initialTasks={tasks || []} />
+        </section>
       </div>
     </div>
   );
