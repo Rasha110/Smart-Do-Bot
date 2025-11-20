@@ -50,8 +50,8 @@ export async function addTodo(formData: FormData) {
     .invoke("sync-embeddings", { method: "GET" })
     .catch((err) => console.error("Embedding sync error:", err));
 
-  revalidatePath("/todos");
-  return { data, error: null };
+    revalidatePath("/todos");
+    return { data, error: null };
 }
 
 // Update a todo

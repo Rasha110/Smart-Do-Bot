@@ -1,7 +1,6 @@
-import AuthForm, { AuthMode } from "@/components/auth/AuthForm";
+import AuthForm from "@/components/auth/AuthForm";
+import { AuthMode } from "@/app/lib/types/auth";
 
 export function SignUpForm() {
-    console.log("SignUpForm AuthMode.SIGNUP:", AuthMode.SIGNUP); // should log "signup"
-
   return <AuthForm mode={AuthMode.SIGNUP} />;
 }

@@ -1,40 +1,51 @@
-"use server";
+'use server'
 
-import { createClient } from "@/app/lib/supabase-server";
+import { createClient } from '@/app/lib/supabase-server'
+import { revalidatePath } from 'next/cache'
 
-export async function signUp(formData: FormData) {
-  const supabase = await createClient();
-
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-  const name = formData.get("name") as string;
-
-  const { error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { full_name: name } },
-  });
-
-  if (error) return { error: error.message };
-
-  return { success: true };
+type SignUpData = {
+  email: string
+  password: string
+  name: string
 }
 
-export async function signIn(formData: FormData) {
-  const supabase = await createClient();
-
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error) return { error: error.message };
-
-  return { success: true };
+type SignInData = {
+  email: string
+  password: string
 }
+
+export async function signUp(data: SignUpData) {
+    const supabase = await createClient()
+    
+    const { error } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: { data: { full_name: data.name } },
+    })
+    
+    if (error) {
+      return { error: error.message }
+    }
+    
+    revalidatePath('/todos')
+    return { success: true }; 
+  }
+  
+  export async function signIn(data: SignInData) {
+    const supabase = await createClient()
+    
+    const { error } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
+    })
+    
+    if (error) {
+      return { error: error.message }
+    }
+    
+    revalidatePath('/todos')
+    return { success: true }; 
+  }
 
 export async function signOut() {
   const supabase = await createClient();
