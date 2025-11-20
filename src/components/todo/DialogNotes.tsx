@@ -17,7 +17,7 @@ export default function DialogNotes({ task }: DialogNotesProps) {
 
   const handleSave = () => {
     startTransition(async () => {
-      const result = await updateTodo(task.id, { notes: notes.trim() || null });
+      const result = await updateTodo(task.id, { notes: notes.trim() || undefined });
 
       if (result.error) {
         console.error("Error updating notes:", result.error);
