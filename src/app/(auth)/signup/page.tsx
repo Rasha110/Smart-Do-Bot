@@ -1,5 +1,6 @@
-import { SignUpForm } from "@/components/auth/SignUpForm";
+import { SignUpForm } from "@/components/auth/SignUpForm"
 import Link from "next/link";
+
 export default function SignUpPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
@@ -10,7 +11,9 @@ export default function SignUpPage() {
             Get started with your todo list today
           </p>
         </div>
+
         <SignUpForm />
+
         <p className="text-center text-sm text-gray-500 mt-4">
           Already have an account?{" "}
           <Link href="/signin" className="text-blue-600 hover:underline font-medium">

@@ -6,6 +6,7 @@ import Button from "@/components/common/Button";
 import { getAuthSchema } from "@/app/lib/schema/schema";
 import { useState } from "react";
 import { signIn, signUp } from "@/app/actions/auth";
+import { useRouter } from "next/navigation";
 
 export enum AuthMode {
   LOGIN = "login",
@@ -15,7 +16,7 @@ export enum AuthMode {
 interface AuthFormProps {
   mode: AuthMode;
 }
-// Single type with optional name
+
 type AuthFormInputs = {
   name?: string;
   email: string;
@@ -23,6 +24,8 @@ type AuthFormInputs = {
 };
 
 export default function AuthForm({ mode }: AuthFormProps) {
+
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
   const schema = getAuthSchema(mode);
@@ -41,7 +44,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
     const formData = new FormData();
     formData.append("email", data.email);
     formData.append("password", data.password);
-
     if (mode === AuthMode.SIGNUP && data.name) {
       formData.append("name", data.name);
     }
@@ -50,7 +52,11 @@ export default function AuthForm({ mode }: AuthFormProps) {
       const result =
         mode === AuthMode.SIGNUP ? await signUp(formData) : await signIn(formData);
 
-      if (result?.error) setError(result.error);
+      if (result?.error) {
+        setError(result.error);
+      } else {
+        router.push("/todos");
+      }
     } catch (err: any) {
       setError(err.message || "An error occurred");
     }
@@ -76,7 +82,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
         </div>
       )}
 
-      {/* Name field for signup */}
       {mode === AuthMode.SIGNUP && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
@@ -90,7 +95,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
         </div>
       )}
 
-      {/* Email field */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
         <input
@@ -102,7 +106,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
         {errors.email && <p className="text-red-500 text-sm">{errors.email.message}</p>}
       </div>
 
-      {/* Password field */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
         <input

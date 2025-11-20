@@ -68,7 +68,7 @@ export async function updateTodo(
     .from("todos")
     .update({ ...updates, updated_at: now })
     .eq("id", id)
-    .eq("user_id", user.id)
+    .eq("user_id", user?.id)
     .select()
     .single();
 
@@ -94,7 +94,7 @@ export async function deleteTodo(id: string) {
     .from("todos")
     .delete()
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", user?.id);
 
   if (dbError) return { error: dbError.message };
 
