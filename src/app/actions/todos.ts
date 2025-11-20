@@ -36,7 +36,7 @@ export async function addTodo(formData: FormData) {
       {
         title: title.trim(),
         notes: notes?.trim() || null,
-        user_id: user.id,
+        user_id: user?.id,
         is_completed: false,
       },
     ])
