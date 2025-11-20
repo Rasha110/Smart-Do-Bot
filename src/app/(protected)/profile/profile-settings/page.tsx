@@ -52,7 +52,7 @@ export default function ProfileSettings() {
     setIsUploading(false);
 
     if ("error" in result) {
-      setError(result.error);
+      setError(error);
       return;
     }
 
@@ -78,7 +78,7 @@ export default function ProfileSettings() {
     setIsSaving(false);
 
     if ("error" in result) {
-      setError(result.error);
+      setError(error);
       return;
     }
 
