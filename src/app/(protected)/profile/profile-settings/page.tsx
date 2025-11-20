@@ -52,7 +52,7 @@ export default function ProfileSettings() {
     setIsUploading(false);
 
     if ("error" in result) {
-      setError(error);
+      setError(result.error ?? "Failed to upload avatar");
       return;
     }
 
@@ -78,7 +78,7 @@ export default function ProfileSettings() {
     setIsSaving(false);
 
     if ("error" in result) {
-      setError(error);
+      setError(result.error ?? "Failed to update profile");
       return;
     }
 
