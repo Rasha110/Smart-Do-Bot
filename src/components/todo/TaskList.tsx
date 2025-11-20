@@ -20,9 +20,12 @@ const TaskList: React.FC<Props> = ({ initialTasks }) => {
     React.startTransition(async () => {
       setTasks((prev) =>
         prev.map((t) =>
-          t.id === id ? { ...t, is_completed: !t.is_completed } : t
+          t.id === id
+            ? { ...t, is_completed: !t.is_completed }
+            : t
         )
       );
+      
 
       // Call server action
       const result = await toggleTodo(id, currentStatus);

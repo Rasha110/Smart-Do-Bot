@@ -19,9 +19,7 @@ const createMessage = (role: "user" | "assistant", content: string, timestamp?: 
   content,
   timestamp: timestamp || new Date().toISOString()
 });
-
 const supabase = createBrowserSupabaseClient();
-
 export function TodoChatbot({ onClose }: { onClose: () => void }) {
   const [messages, setMessages] = useState<Message[]>([
     createMessage("assistant", "Hi! I'm your AI todo assistant. Ask me anything about your tasks!")
@@ -165,7 +163,7 @@ export function TodoChatbot({ onClose }: { onClose: () => void }) {
       setIsLoading(false);
     }
   };
-
+console.log("messge",messages)
   return (
     <div className="h-full flex flex-col bg-white rounded-lg border-0 overflow-hidden">
       {/* Header */}

@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
       .select("*")
       .in("id", todoIds);
 
-    // Merge similarity with full data
+    // Merge similarity with full data 
     const similarTodos = ragResults.map((rag: any) => {
       const fullTodo = fullTodos?.find((t: any) => t.id === rag.todo_id);
       return { ...fullTodo, similarity: rag.similarity };
@@ -141,9 +141,6 @@ Deno.serve(async (req) => {
       const created = new Date(t.created_at).toLocaleString('en-US');
       const updated = new Date(t.updated_at).toLocaleString('en-US');
       const match = (t.similarity * 100).toFixed(1);
-      
-    
-      
       // Check if task was updated (created_at != updated_at)
       const wasUpdated = new Date(t.created_at).getTime() !== new Date(t.updated_at).getTime() ? " Updated" : "";
       //string given to AI
@@ -164,7 +161,6 @@ ${pendingList.map(formatTodo).join("\n") }`;
       {
         role: "system",
         content: `You are a Todo Assistant using AI semantic search.
-
 RULES:
 1. Use STATS for counts
 2. Only reference listed todos
@@ -174,7 +170,6 @@ RULES:
 6. "updated"  means task was modified after creation
 7. Use conversation history for context (understand "those", "them", "the first one")
 8. Be concise and accurate
-
 Current time is provided. Compare dates to answer "today", "yesterday", etc.
 Showing ${similarTodos.length} of ${total } todos.`
       }
@@ -189,22 +184,25 @@ Showing ${similarTodos.length} of ${total } todos.`
     messages.push({ role: "user", content: `${contextData}\n\nQ: ${query}` });
     // Get AI response
     const aiResponse = await callOpenAI(messages);
+    const allTopMatches = similarTodos.map(t => t.title); 
     // Prepare new todo_context
     const newTodoContext = {
       stats: { total: total, completed: completed , pending },
       found: similarTodos.length,
-      completed_titles: completedList.slice(0, 10).map((t: any) => t.title),
-      pending_titles: pendingList.slice(0, 10).map((t: any) => t.title),
-      top_match: similarTodos[0]?.title || null,
+      completed_titles: completedList.map((t: any) => t.title),
+      pending_titles: pendingList.map((t: any) => t.title),
+      top_matches: allTopMatches, //  store all titles here
+
+      top_match: similarTodos.map((t: any) => t.title),
       query_timestamp: now.toISOString()
-    };
+    }; 
     // Update todo_embeddings.todo_context column with merged context
     for (const todo of similarTodos.slice(0, 10)) {
-      const existingCtx = contextMap.get(todo.id) || {};
+      const existingCtx = contextMap.get(todo.id) || {}; //old saved info about  todo.
       const existingQueries = existingCtx.recent_queries || [];
       const existingCount = existingCtx.query_count || 0;
       
-      // Merge old and new context
+      // Merge old context with new context
       const updatedContext = {
         ...newTodoContext,
         query_count: existingCount + 1,  // Increment count
@@ -218,7 +216,6 @@ Showing ${similarTodos.length} of ${total } todos.`
         .eq("todo_id", todo.id)
         .eq("user_id", user_id);
     }
-
     return jsonResponse({ reply: aiResponse });
 
   } catch (err: any) {

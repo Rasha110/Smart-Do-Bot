@@ -1,13 +1,12 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/app/lib/supabase-server";
 import NavBar from "@/components/todo/NavBar";
+import { getSupabaseAndUser } from "@/app/lib/auth-utils";
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { supabase, user, error } = await getSupabaseAndUser();
 
   // Redirect if user is not authenticated
-  if (!user) redirect("/signin");
+  if (!user || error) redirect("/signin");
 
   // Render the client layout with fetched user
   return <NavBar user={user}>{children}</NavBar>;

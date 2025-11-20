@@ -1,39 +1,30 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import Button from "@/components/common/Button";
 import { getAuthSchema } from "@/app/lib/schema/schema";
 import { useState } from "react";
 import { signIn, signUp } from "@/app/actions/auth";
+
 export enum AuthMode {
   LOGIN = "login",
-  SIGNUP = "signup"
+  SIGNUP = "signup",
 }
 
 interface AuthFormProps {
   mode: AuthMode;
 }
-
-// Define explicit types for both forms
-type SignupFormInputs = {
-  name: string;
+// Single type with optional name
+type AuthFormInputs = {
+  name?: string;
   email: string;
   password: string;
 };
-
-type LoginFormInputs = {
-  email: string;
-  password: string;
-};
-
-type AuthFormInputs = SignupFormInputs | LoginFormInputs;
 
 export default function AuthForm({ mode }: AuthFormProps) {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  
+
   const schema = getAuthSchema(mode);
 
   const {
@@ -46,19 +37,19 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
   const onSubmit = async (data: AuthFormInputs) => {
     setError(null);
-  
+
     const formData = new FormData();
     formData.append("email", data.email);
     formData.append("password", data.password);
-  
-    if (mode === AuthMode.SIGNUP) {
-      formData.append("name", (data as SignupFormInputs).name);
+
+    if (mode === AuthMode.SIGNUP && data.name) {
+      formData.append("name", data.name);
     }
-  
+
     try {
       const result =
         mode === AuthMode.SIGNUP ? await signUp(formData) : await signIn(formData);
-  
+
       if (result?.error) setError(result.error);
     } catch (err: any) {
       setError(err.message || "An error occurred");
@@ -85,22 +76,25 @@ export default function AuthForm({ mode }: AuthFormProps) {
         </div>
       )}
 
+      {/* Name field for signup */}
       {mode === AuthMode.SIGNUP && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
           <input
             type="text"
-            {...register("name" as any)}
+            {...register("name")}
             placeholder="John Doe"
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
           />
-          {"name" in errors && <p className="text-red-500 text-sm">{(errors as any).name?.message}</p>}
+          {errors.name && <p className="text-red-500 text-sm">{errors.name.message}</p>}
         </div>
       )}
 
+      {/* Email field */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
         <input
+          type="email"
           {...register("email")}
           placeholder="you@example.com"
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
@@ -108,6 +102,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
         {errors.email && <p className="text-red-500 text-sm">{errors.email.message}</p>}
       </div>
 
+      {/* Password field */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
         <input
@@ -120,7 +115,11 @@ export default function AuthForm({ mode }: AuthFormProps) {
       </div>
 
       <Button type="submit" disabled={isSubmitting} variant="primary" className="w-full">
-        {isSubmitting ? "Please wait..." : mode === AuthMode.SIGNUP ? "Sign Up" : "Sign In"}
+        {isSubmitting
+          ? "Please wait..."
+          : mode === AuthMode.SIGNUP
+          ? "Sign Up"
+          : "Sign In"}
       </Button>
     </form>
   );

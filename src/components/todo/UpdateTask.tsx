@@ -17,26 +17,37 @@ export default function UpdateTask({ task, tasks, setTasks }: UpdateTaskProps) {
 
   return (
     <form
-      action={async (formData: FormData) => {
-        const newTitle = formData.get("title") as string;
-        if (!newTitle.trim()) return;
-
-        //  UI update
+    action={async (formData: FormData) => {
+      const newTitle = formData.get("title") as string;
+      if (!newTitle.trim()) return;
+  
+      // Optimistic UI update (optional)
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === task.id ? { ...t, title: newTitle.trim() } : t
+        )
+      );
+  
+      // Call server action
+      const result = await updateTodo(task.id, { title: newTitle.trim() });
+  
+      if (result.error) {
+        console.error("Update failed:", result.error);
+        // Revert optimistic update
         setTasks((prev) =>
-          prev.map((t) => (t.id === task.id ? { ...t, title: newTitle.trim() } : t))
+          prev.map((t) => (t.id === task.id ? task : t))
         );
-
-        const result = await updateTodo(task.id, { title: newTitle.trim() });
-
-        if (result.error) {
-        
-          setTasks(tasks); // revert on error
-        } else {
-          setIsEditing(false);
-        }
-      }}
-      className="ml-2 flex items-center gap-2"
-    >
+      } else if (result.data) {
+        // Update the task in state with the server's full updated task
+        setTasks((prev) =>
+          prev.map((t) => (t.id === task.id ? result.data : t))
+        );
+        setIsEditing(false);
+      }
+    }}
+    className="ml-2 flex items-center gap-2"
+  >
+  
       {isEditing ? (
         <>
           <input
