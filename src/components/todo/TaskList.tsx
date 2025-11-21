@@ -8,7 +8,8 @@ import UpdateTask from "@/components/todo/UpdateTask";
 import Button from "@/components/common/Button";
 import DialogNotes from "@/components/todo/DialogNotes";
 import { toggleTodo } from "@/app/actions/todos";
-
+import { useAtomValue } from "jotai";
+import { todoFilterAtom } from "../../../atoms/todoAtoms";
 type Props = {
   initialTasks: Task[];
 };
@@ -42,12 +43,20 @@ const TaskList: React.FC<Props> = ({ initialTasks }) => {
     });
   };
 
-  
+  const filter = useAtomValue(todoFilterAtom);
+
+const filteredTasks = tasks.filter((task) => {
+  if (filter === "completed") return task.is_completed;
+  if (filter === "active") return !task.is_completed;
+  return true;
+});
+
 
   return (
     <div>
       <ul className="mt-5 w-full max-w-3xl">
-        {tasks.map((task) => (
+      {filteredTasks.map((task) => (
+
           <li
             key={task.id}
             className="flex flex-col mt-5 bg-blue-300 p-4 rounded-lg text-white min-w-[400px]"

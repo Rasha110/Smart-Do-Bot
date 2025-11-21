@@ -2,6 +2,7 @@ import { getTodos } from "@/app/actions/todos";
 import AddTask from "@/components/todo/AddTask";
 import TaskList from "@/components/todo/TaskList";
 import { redirect } from "next/navigation";
+import FilterBar from "@/components/todo/FilterBar";
 
 export default async function TodosPage() {
   const { data: tasks, error } = await getTodos();
@@ -41,7 +42,7 @@ export default async function TodosPage() {
             </div>
           </div>
         </section>
-
+     
         {/* Add Task */}
         <section className="bg-white rounded-xl shadow-md p-6">
           <h2 className="text-lg font-semibold text-gray-700 mb-4">
@@ -49,7 +50,7 @@ export default async function TodosPage() {
           </h2>
           <AddTask />
         </section>
-
+        <FilterBar /> 
         {/* Task List */}
         <section className="bg-white rounded-xl shadow-md p-6">
           <h2 className="text-lg font-semibold text-gray-700 mb-4">Tasks</h2>

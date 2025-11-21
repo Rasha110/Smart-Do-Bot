@@ -1,5 +1,7 @@
 // app/layout.tsx
+
 import "./globals.css";
+
 
 export const metadata = {
   title: "My Todo App",
@@ -9,8 +11,13 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <meta name="theme-color" content="#ffffff" />
+      </head>
       <body className="bg-gray-50 text-gray-900">
-        {children}
+     
+          {children}
+      
       </body>
     </html>
   );

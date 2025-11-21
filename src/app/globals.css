@@ -113,10 +113,16 @@
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
+    /* Light mode colors */
+    :root {
+      --background: 249 250 251; /* gray-50 */
+      --foreground: 17 24 39; /* gray-900 */
+    }
+    .dark {
+        --background: 17 24 39; /* gray-900 */
+        --foreground: 249 250 251; /* gray-50 */
+      }
   body {
-    @apply bg-background text-foreground;
-  }
+    @apply bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100;
+    transition: background-color 0.2s ease, color 0.2s ease;  }
 }

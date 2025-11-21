@@ -62,7 +62,7 @@ export default function NavBar({ children, user }: Props) {
               </button>
 
               {menuOpen && (
-                <div className="absolute right-0 mt-2 w-55 bg-white border rounded-lg shadow-lg py-2 z-50">
+                <div className="absolute right-0 mt-2 w-55 bg-white  rounded-lg shadow-lg py-2 z-50">
                   <div className="px-4 py-2 border-b">
                     <p className="text-sm font-medium">{fullName || email.split("@")[0]}</p>
                     <p className="text-xs text-gray-500">{email}</p>
