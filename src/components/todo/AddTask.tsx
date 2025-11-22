@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
+import { useRouter } from "next/navigation"; // Add this import
 import { addTodo } from "@/app/actions/todos";
 import { schema } from "@/app/lib/schema/schema";
 import Button from "@/components/common/Button";
@@ -11,6 +12,7 @@ type FormInputs = { title: string; notes?: string };
 
 export default function AddTask() {
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter(); // Add this
 
   const {
     register,
@@ -18,7 +20,7 @@ export default function AddTask() {
     reset,
     formState: { errors, isSubmitting },
   } = useForm<FormInputs>({
-    resolver: yupResolver(schema) ,
+    resolver: yupResolver(schema),
   });
 
   const onSubmit = async (data: FormInputs) => {
@@ -36,6 +38,7 @@ export default function AddTask() {
       setError(result.error);
     } else {
       reset();
+      router.refresh(); // Add this line to force a refresh
     }
   };
 
@@ -59,8 +62,6 @@ export default function AddTask() {
       {errors.title && (
         <p className="text-red-500 text-sm mt-1">{errors.title.message}</p>
       )}
-
-     
 
       <Button 
         type="submit" 
