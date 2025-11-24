@@ -7,7 +7,7 @@ import { signUp, signIn } from "@/app/actions/auth";
 import * as yup from "yup";
 import { useState } from "react";
 import { AuthMode } from "@/app/lib/types/auth";
-import { useRouter } from "next/navigation"; // ✅ import router
+import { useRouter } from "next/navigation"; //
 
 interface AuthFormProps {
   mode: AuthMode;
@@ -18,7 +18,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const schema = getAuthSchema(mode);
   type AuthFormInputs = yup.InferType<typeof schema>;
 
-  const router = useRouter(); // ✅ initialize router
+  const router = useRouter(); // 
 
   const {
     register,
@@ -60,7 +60,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
     <div className="w-[420px] h-[520px] flex items-center justify-center">
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="bg-white border border-gray-200 rounded-lg shadow-sm p-10 space-y-4 "
+        className="bg-white w-full border border-gray-200 rounded-lg shadow-sm p-10 space-y-4 "
       >
         <h2 className="text-xl font-semibold text-gray-800">
           {mode === AuthMode.SIGNUP ? "Sign Up" : "Sign In"}

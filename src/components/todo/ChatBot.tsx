@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/common/Input";
 import Button from "@/components/common/Button";
 import { Send, Bot, User, X } from "lucide-react";
-import { createBrowserSupabaseClient } from "@/app/lib/supabase-browser";
+import { useUserId, useChatHistory, useSendMessage } from "@/hooks/useTodoChat";
 
 interface Message {
   id: string;
@@ -20,47 +20,32 @@ const createMessage = (role: "user" | "assistant", content: string, timestamp?: 
   timestamp: timestamp || new Date().toISOString()
 });
 
-const supabase = createBrowserSupabaseClient();
-
 export function TodoChatbot({ onClose }: { onClose: () => void }) {
   const [messages, setMessages] = useState<Message[]>([
     createMessage("assistant", "Hi! I'm your AI todo assistant. Ask me anything about your tasks!")
   ]);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const hasLoadedHistory = useRef(false);
 
+  // Use custom hooks
+  const { data: userId, error: authError, isLoading: isLoadingUser } = useUserId();
+  const { data: chatHistory, isLoading: isLoadingHistory } = useChatHistory(userId);
+  const sendMessage = useSendMessage(userId);
+
+  // Load chat history into messages
   useEffect(() => {
-    if (hasLoadedHistory.current) return;
-    
-    const getUser = async () => {
-      try {
-        const { data, error } = await supabase.auth.getUser();
-
-        if (error || !data.user) {
-          setAuthError("No user found. Please log in.");
-          setIsLoadingHistory(false);
-          return;
+    if (chatHistory && chatHistory.length > 0) {
+      setMessages(prev => {
+        // Only add history if we just have the welcome message
+        if (prev.length === 1 && prev[0].role === "assistant") {
+          return [prev[0], ...chatHistory];
         }
+        return prev;
+      });
+    }
+  }, [chatHistory]);
 
-        setUserId(data.user.id);
-        await loadChatHistory(data.user.id);
-
-        hasLoadedHistory.current = true;
-
-      } catch (err) {
-        setAuthError("Error retrieving authentication");
-        setIsLoadingHistory(false);
-      }
-    };
-
-    getUser();
-  }, []);
-
+  // Auto-scroll to bottom
   useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
@@ -68,94 +53,27 @@ export function TodoChatbot({ onClose }: { onClose: () => void }) {
     });
   }, [messages]);
 
-  const loadChatHistory = async (uid: string) => {
-    try {
-      setIsLoadingHistory(true);
-
-      const { data: chatHistory, error } = await supabase
-        .from("ai_chat_history")
-        .select("query, response, created_at")
-        .eq("user_id", uid)
-        .order("created_at", { ascending: false }) // newest first
-        .limit(20);
-
-      if (error || !chatHistory) {
-        setIsLoadingHistory(false);
-        return;
-      }
-
-      // Reverse to old → new
-      const reversed = chatHistory.reverse();
-
-      const historyMessages: Message[] = [];
-
-      reversed.forEach((record) => {
-        historyMessages.push({
-          id: `user-${record.created_at}-${Math.random()}`,
-          role: "user",
-          content: record.query,
-          timestamp: record.created_at
-        });
-        historyMessages.push({
-          id: `assistant-${record.created_at}-${Math.random()}`,
-          role: "assistant",
-          content: record.response,
-          timestamp: record.created_at
-        });
-      });
-
-      setMessages(prev => {
-        // prevent duplicate reloading
-        if (prev.length > 1) return prev;
-
-        return [
-          createMessage("assistant", "Hi! I'm your AI todo assistant. Ask me anything about your tasks!"),
-          ...historyMessages
-        ];
-      });
-
-      setIsLoadingHistory(false);
-    } catch (err) {
-      setIsLoadingHistory(false);
-    }
-  };
-
   const handleSend = async () => {
-    if (!input.trim() || !userId || isLoading) return;
+    if (!input.trim() || !userId || sendMessage.isPending) return;
 
     const userMessage = createMessage("user", input);
     setMessages(prev => [...prev, userMessage]);
-
+    const currentInput = input;
     setInput("");
-    setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("chatbot", {
-        body: {
-          user_id: userId,
-          query: userMessage.content
-        }
-      });
-
-      if (error) {
-        const details = error.context ? JSON.stringify(error.context) : error.message;
-        throw new Error(`Chatbot error: ${details}`);
-      }
-
-      if (!data || !data.reply) {
-        throw new Error("Invalid response from chatbot");
-      }
-
-      const assistantMessage = createMessage("assistant", data.reply);
+      const reply = await sendMessage.mutateAsync(currentInput);
+      const assistantMessage = createMessage("assistant", reply);
       setMessages(prev => [...prev, assistantMessage]);
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Something went wrong.";
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : "Something went wrong.";
       const errorMessage = createMessage("assistant", `Error: ${errorMsg}`);
       setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
     }
   };
+
+  const isLoading = isLoadingUser || isLoadingHistory;
+  const hasError = !!authError;
 
   return (
     <div className="h-full flex flex-col bg-white rounded-lg border-0 overflow-hidden">
@@ -183,13 +101,13 @@ export function TodoChatbot({ onClose }: { onClose: () => void }) {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50" ref={scrollRef}>
         
-        {authError && (
+        {hasError && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-sm text-red-600">{authError}</p>
+            <p className="text-sm text-red-600">{authError?.message}</p>
           </div>
         )}
 
-        {isLoadingHistory ? (
+        {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-gray-500">Loading chat history...</p>
           </div>
@@ -226,7 +144,7 @@ export function TodoChatbot({ onClose }: { onClose: () => void }) {
               </div>
             ))}
 
-            {isLoading && (
+            {sendMessage.isPending && (
               <div className="flex gap-3 justify-start">
                 <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
                   <Bot className="h-4 w-4 text-white" />
@@ -247,13 +165,13 @@ export function TodoChatbot({ onClose }: { onClose: () => void }) {
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
           placeholder="Ask about your todos..."
-          disabled={isLoading || !userId || !!authError}
+          disabled={sendMessage.isPending || !userId || hasError}
           className="flex-1"
         />
         <Button
           variant="primary"
           onClick={handleSend}
-          disabled={isLoading || !userId || !!authError}
+          disabled={sendMessage.isPending || !userId || hasError}
           className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white p-2 rounded-lg transition-colors"
         >
           <Send className="h-4 w-4" />

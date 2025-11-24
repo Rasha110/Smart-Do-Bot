@@ -1,7 +1,5 @@
-// app/layout.tsx
-
 import "./globals.css";
-
+import ReactQueryProvider from "@/components/providers/ReactQueryProvider";
 
 export const metadata = {
   title: "My Todo App",
@@ -15,9 +13,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="theme-color" content="#ffffff" />
       </head>
       <body className="bg-gray-50 text-gray-900">
-     
+        <ReactQueryProvider>
           {children}
-      
+        </ReactQueryProvider>
       </body>
     </html>
   );
